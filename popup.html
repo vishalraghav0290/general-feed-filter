@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      width: 280px; margin: 0; padding: 16px;
+      background: #0b1622; color: #eaf2fa;
+      font: 14px/1.4 system-ui, sans-serif;
+    }
+    h1 { font-size: 16px; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+    .sub { color: #93a7b8; font-size: 12px; margin: 0 0 14px; }
+    .row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid #22323f; }
+    .row:first-of-type { border-top: none; }
+    label { font-size: 13px; }
+    .hint { color: #93a7b8; font-size: 11px; margin-top: 2px; }
+    switch, .sw { }
+    input[type="checkbox"] { width: 40px; height: 22px; appearance: none; background: #22323f; border-radius: 12px; position: relative; cursor: pointer; outline: none; transition: background .15s; }
+    input[type="checkbox"]:checked { background: #4fa3ff; }
+    input[type="checkbox"]::after { content: ""; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; top: 2px; left: 2px; transition: left .15s; }
+    input[type="checkbox"]:checked::after { left: 20px; }
+    textarea { width: 100%; box-sizing: border-box; margin-top: 8px; background: #14232f; color: #eaf2fa; border: 1px solid #22323f; border-radius: 8px; padding: 8px; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; min-height: 120px; max-height: 260px; }
+    .count { color: #93a7b8; font-size: 11px; margin-top: 4px; }
+    .btnrow { display: flex; gap: 8px; }
+    button { margin-top: 8px; flex: 1; background: #4fa3ff; color: #001b33; border: none; border-radius: 8px; padding: 9px; font-weight: 600; cursor: pointer; }
+    button.secondary { background: #22323f; color: #eaf2fa; }
+    .saved { color: #43d17a; font-size: 12px; margin-top: 6px; height: 14px; }
+  </style>
+</head>
+<body>
+  <h1>✈ Aviation X Filter</h1>
+  <p class="sub">Shows only aviation posts in your X timeline.</p>
+
+  <div class="row">
+    <div><label>Filter enabled</label></div>
+    <input type="checkbox" id="enabled" />
+  </div>
+
+  <div class="row">
+    <div>
+      <label>Fully remove posts</label>
+      <div class="hint">Off = collapse &amp; dim · On = hide completely</div>
+    </div>
+    <input type="checkbox" id="fullyRemove" />
+  </div>
+
+  <div style="padding-top:12px;border-top:1px solid #22323f;">
+    <label>Filter keywords</label>
+    <div class="hint">A post is kept if it contains any of these (comma separated). Edit freely — remove ones you don't want, add your own.</div>
+    <textarea id="keywordList" rows="10" placeholder="aviation, flight, indigo, air india, iaf ..."></textarea>
+    <div class="count" id="count"></div>
+    <div class="btnrow">
+      <button id="save">Save</button>
+      <button id="reset" class="secondary">Reset to defaults</button>
+    </div>
+    <div class="saved" id="savedMsg"></div>
+  </div>
+
+  <script src="keywords.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
