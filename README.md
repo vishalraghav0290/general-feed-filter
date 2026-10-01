@@ -1,8 +1,8 @@
-# General Feed Filter for X
+# X Feed Filter
 
 A browser extension by Vishal Raghav that hides posts in your X (Twitter) "For You" feed unless they match your own keywords. It comes with an aviation keyword list by default, and you can replace it with any topic.
 
-Live URL: none. You install it from this repo's [Releases](https://github.com/vishalraghav0290/general-feed-filter/releases) page.
+Live URL: none. You install it from this repo's [Releases](https://github.com/vishalraghav0290/x-feed-filter/releases) page.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4)
@@ -33,7 +33,7 @@ Live URL: none. You install it from this repo's [Releases](https://github.com/vi
 
 ### Install the ready-made build (no tools needed)
 
-1. Download `general-feed-filter-v1.0.0.zip` from the [latest release](https://github.com/vishalraghav0290/general-feed-filter/releases/latest).
+1. Download `x-feed-filter-v1.0.1.zip` from the [latest release](https://github.com/vishalraghav0290/x-feed-filter/releases/latest).
 2. Unzip it to a folder you will keep.
 3. Open `chrome://extensions` (Edge: `edge://extensions`).
 4. Turn on **Developer mode**.
@@ -45,8 +45,8 @@ Live URL: none. You install it from this repo's [Releases](https://github.com/vi
 Prerequisites: Node.js 16.20.0 or newer (required by TypeScript 7.0.2) and npm.
 
 ```bash
-git clone https://github.com/vishalraghav0290/general-feed-filter.git
-cd general-feed-filter
+git clone https://github.com/vishalraghav0290/x-feed-filter.git
+cd x-feed-filter
 npm install
 npm run build
 ```
@@ -94,7 +94,7 @@ The code makes no network requests.
 
 ## Deployment
 
-There is no store listing or CI pipeline. Releases are published manually as a zip of `dist/` on [GitHub Releases](https://github.com/vishalraghav0290/general-feed-filter/releases).
+There is no store listing or CI pipeline. Releases are published manually as a zip of `dist/` on [GitHub Releases](https://github.com/vishalraghav0290/x-feed-filter/releases).
 
 ## Credits
 

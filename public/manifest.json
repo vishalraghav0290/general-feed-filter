@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "General Feed Filter for X",
-  "version": "1.0.0",
+  "name": "X Feed Filter",
+  "version": "1.0.1",
   "description": "Keep only the posts you care about in your X (Twitter) For You feed, using your own keywords. Ships with an aviation preset. Runs on-device.",
   "permissions": ["storage"],
   "host_permissions": [
@@ -17,7 +17,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "General Feed Filter"
+    "default_title": "X Feed Filter"
   },
   "icons": {
     "48": "icon48.png",

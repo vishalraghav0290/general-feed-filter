@@ -1,4 +1,4 @@
-/* General Feed Filter for X (content script)
+/* X Feed Filter (content script)
  * Hides "For You" timeline posts whose text doesn't match any of your
  * keywords. Ships with an aviation keyword preset by default.
  * State (on/off, mode, custom keywords) lives in chrome.storage.sync.
