@@ -1,0 +1,15 @@
+{
+  "name": "general-feed-filter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser extension that filters the X (Twitter) For You feed by keyword.",
+  "scripts": {
+    "build": "node scripts/build.mjs clean && tsc -p . && node scripts/build.mjs copy",
+    "typecheck": "tsc -p . --noEmit"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chrome": "0.3.4",
+    "typescript": "7.0.2"
+  }
+}

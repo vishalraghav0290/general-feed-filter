@@ -1,13 +1,28 @@
 /* Aviation Only - X Feed Filter (content script)
  * Hides timeline posts whose text doesn't match any aviation keyword.
  * State (on/off, mode, custom keywords) lives in chrome.storage.sync.
+ * Depends on keywords.ts (injected first) for DEFAULT_AVIATION_KEYWORDS,
+ * SETTINGS_KEYS and resolveKeywords.
  */
 (function () {
   "use strict";
 
-  const state = {
+  interface FilterState {
+    enabled: boolean;
+    fullyRemove: boolean; // false = collapse+dim, true = display:none
+    keywords: string[];
+    kept: number;
+    hidden: number;
+  }
+
+  interface Anchor {
+    post: HTMLElement;
+    top: number;
+  }
+
+  const state: FilterState = {
     enabled: true,
-    fullyRemove: false,      // false = collapse+dim, true = display:none
+    fullyRemove: false,
     keywords: DEFAULT_AVIATION_KEYWORDS.slice(),
     kept: 0,
     hidden: 0
@@ -18,7 +33,7 @@
   // When the extension is reloaded/updated, this old content script loses its
   // connection ("Extension context invalidated"). Detect that and shut down
   // quietly instead of throwing on every chrome.* call.
-  function extensionAlive() {
+  function extensionAlive(): boolean {
     try {
       return !!(chrome.runtime && chrome.runtime.id);
     } catch (e) {
@@ -26,24 +41,24 @@
     }
   }
 
-  const timers = [];
-  function shutdown() {
-    try { if (observer) observer.disconnect(); } catch (e) {}
+  const timers: ReturnType<typeof setInterval>[] = [];
+  function shutdown(): void {
+    try { if (observer) observer.disconnect(); } catch (e) { /* ignore */ }
     timers.forEach(clearInterval);
     // Reveal any posts we had hidden so the page is left clean.
     try {
-      document.querySelectorAll("article[" + ATTR + "]").forEach(clearHidden);
-    } catch (e) {}
+      allMarkedPosts().forEach(clearHidden);
+    } catch (e) { /* ignore */ }
     const b = document.getElementById("avf-badge");
     if (b) b.remove();
   }
 
   // Safe wrappers: no-op if the extension context is gone.
-  function safeStorageGet(keys, cb) {
+  function safeStorageGet(keys: string[], cb: (res: StoredSettings) => void): void {
     if (!extensionAlive()) return;
-    try { chrome.storage.sync.get(keys, cb); } catch (e) { shutdown(); }
+    try { chrome.storage.sync.get(keys, (items) => cb(items as StoredSettings)); } catch (e) { shutdown(); }
   }
-  function safeStorageSet(obj) {
+  function safeStorageSet(obj: StoredSettings): void {
     if (!extensionAlive()) return;
     try { chrome.storage.sync.set(obj); } catch (e) { shutdown(); }
   }
@@ -51,15 +66,15 @@
   // Only ever touch the "For You" home feed. Anywhere else — Following tab,
   // profiles, search, individual posts, notifications — the extension does
   // nothing at all. X is a SPA, so every scan re-checks this.
-  function onHome() {
+  function onHome(): boolean {
     return location.pathname === "/home";
   }
   // The home page has two tabs ("For You" / "Following"), both at /home.
   // Only filter when the "For You" tab is the selected one.
-  function onForYou() {
+  function onForYou(): boolean {
     if (!onHome()) return false;
-    const tabs = document.querySelectorAll('[role="tab"]');
-    for (const tab of tabs) {
+    const tabs = document.querySelectorAll<HTMLElement>('[role="tab"]');
+    for (const tab of Array.from(tabs)) {
       if (tab.getAttribute("aria-selected") === "true") {
         const label = (tab.innerText || "").trim().toLowerCase();
         return label.includes("for you");
@@ -68,11 +83,15 @@
     // If we can't read the tabs yet, don't assume — stay off until we can.
     return false;
   }
-  function onFilterablePage() {
+  function onFilterablePage(): boolean {
     return onForYou();
   }
 
-  function normalizedKeywords() {
+  function allMarkedPosts(): HTMLElement[] {
+    return Array.from(document.querySelectorAll<HTMLElement>("article[" + ATTR + "]"));
+  }
+
+  function normalizedKeywords(): string[] {
     return state.keywords.map(k => String(k).toLowerCase().trim()).filter(Boolean);
   }
 
@@ -82,21 +101,25 @@
   // bounded by non-alphanumeric characters (spaces, punctuation, start/end).
   // Multi-word phrases ("air india") and hyphenated types ("su-30", "f-16")
   // and numeric types ("737") all work correctly under this rule.
-  function escapeRegExp(s) {
+  function escapeRegExp(s: string): string {
     return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
-  function buildMatchers(list) {
+  function buildMatchers(list: string[]): RegExp[] {
     return list.map(k => new RegExp("(?<![a-z0-9])" + escapeRegExp(k) + "(?![a-z0-9])", "i"));
   }
-  let KW = normalizedKeywords();
-  let MATCHERS = buildMatchers(KW);
+  let MATCHERS: RegExp[] = buildMatchers(normalizedKeywords());
 
-  function isAviation(text) {
+  function setKeywords(list: string[]): void {
+    state.keywords = list;
+    MATCHERS = buildMatchers(normalizedKeywords());
+  }
+
+  function isAviation(text: string): boolean {
     const t = text || "";
     return MATCHERS.some(re => re.test(t));
   }
 
-  function applyHidden(post) {
+  function applyHidden(post: HTMLElement): void {
     if (state.fullyRemove) {
       post.style.display = "none";
     } else {
@@ -109,7 +132,7 @@
     post.setAttribute(ATTR, "hidden");
   }
 
-  function clearHidden(post) {
+  function clearHidden(post: HTMLElement): void {
     post.style.opacity = "";
     post.style.filter = "";
     post.style.maxHeight = "";
@@ -124,25 +147,35 @@
    * attributes, badge) keep waking the observer, we re-scan forever and the
    * page never finishes rendering. So we disconnect around our writes and
    * debounce scans. */
-  let observer = null;
+  let observer: MutationObserver | null = null;
   let scanScheduled = false;
 
-  function pauseObserver() {
+  function pauseObserver(): void {
     if (observer) observer.disconnect();
   }
-  function resumeObserver() {
+  function resumeObserver(): void {
     if (observer) {
       observer.observe(document.documentElement, { childList: true, subtree: true });
     }
   }
 
-  function recount() {
+  // Un-hide everything we touched, without waking our own observer.
+  function clearAllMarks(): void {
+    pauseObserver();
+    try {
+      allMarkedPosts().forEach(clearHidden);
+    } finally {
+      resumeObserver();
+    }
+  }
+
+  function recount(): void {
     state.kept = document.querySelectorAll('article[' + ATTR + '="kept"]').length;
     state.hidden = document.querySelectorAll('article[' + ATTR + '="hidden"]').length;
   }
 
   // Returns the element that actually scrolls the timeline.
-  function scroller() {
+  function scroller(): Element {
     return document.scrollingElement || document.documentElement;
   }
 
@@ -151,15 +184,15 @@
   // remember where it sits relative to the viewport, then after mutating we
   // restore the scroll so that post stays put. This prevents the "I ended up
   // in the middle" drift caused by collapsing posts above the viewport.
-  function pickAnchor() {
-    const posts = document.querySelectorAll("article");
-    for (const post of posts) {
+  function pickAnchor(): Anchor | null {
+    const posts = document.querySelectorAll<HTMLElement>("article");
+    for (const post of Array.from(posts)) {
       const top = post.getBoundingClientRect().top;
       if (top >= 0) return { post, top };
     }
     return null;
   }
-  function restoreAnchor(anchor) {
+  function restoreAnchor(anchor: Anchor | null): void {
     if (!anchor || !anchor.post.isConnected) return;
     const newTop = anchor.post.getBoundingClientRect().top;
     const delta = newTop - anchor.top;
@@ -168,13 +201,13 @@
     }
   }
 
-  function scan() {
+  function scan(): void {
     if (!state.enabled) return;
     if (!onFilterablePage()) { unfilterAll(); return; }
     pauseObserver();
     const anchor = pickAnchor();
     try {
-      const posts = document.querySelectorAll("article");
+      const posts = document.querySelectorAll<HTMLElement>("article");
       posts.forEach(post => {
         if (post.getAttribute(ATTR)) return; // already decided
         const text = post.innerText || "";
@@ -193,7 +226,7 @@
   }
 
   // Debounced scan: coalesce bursts of DOM mutations into one scan.
-  function scheduleScan() {
+  function scheduleScan(): void {
     if (scanScheduled) return;
     scanScheduled = true;
     requestAnimationFrame(() => {
@@ -202,10 +235,10 @@
     });
   }
 
-  function unfilterAll() {
+  function unfilterAll(): void {
     pauseObserver();
     try {
-      document.querySelectorAll("article[" + ATTR + "]").forEach(clearHidden);
+      allMarkedPosts().forEach(clearHidden);
       recount();
       updateBadge();
     } finally {
@@ -213,19 +246,26 @@
     }
   }
 
+  // Clear all decisions and re-run the filter from scratch.
+  function rescan(): void {
+    clearAllMarks();
+    scan();
+  }
+
   /* ---- badge ---- */
-  let badge;
-  function badgeEl() {
+  let badge: HTMLDivElement | undefined;
+  function badgeEl(): HTMLDivElement | undefined {
     if (!badge && document.body) {
-      badge = document.createElement("div");
-      badge.id = "avf-badge";
-      badge.style.cssText =
+      const el = document.createElement("div");
+      el.id = "avf-badge";
+      el.style.cssText =
         "position:fixed;bottom:16px;right:14px;z-index:2147483647;" +
         "background:#0d1b2a;color:#4fa3ff;font:600 12px/1 system-ui,sans-serif;" +
         "padding:9px 13px;border-radius:20px;box-shadow:0 2px 12px rgba(0,0,0,.45);" +
         "cursor:pointer;user-select:none;opacity:.94";
-      badge.title = "Click to toggle the aviation filter";
-      badge.addEventListener("click", (e) => {
+      el.title = "Click to toggle the aviation filter";
+      el.setAttribute("role", "button");
+      el.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         state.enabled = !state.enabled;
@@ -238,11 +278,12 @@
         }
         updateBadge();
       }, true);
-      document.body.appendChild(badge);
+      document.body.appendChild(el);
+      badge = el;
     }
     return badge;
   }
-  function updateBadge() {
+  function updateBadge(): void {
     const b = badgeEl();
     if (!b) return;
     // Hide the badge entirely on pages we don't filter.
@@ -255,26 +296,11 @@
     b.style.color = state.enabled ? "#4fa3ff" : "#ffb74d";
   }
 
-  // Resolve the effective keyword list from stored state.
-  // - keywordList: full user-editable list (takes precedence).
-  // - customKeywords: legacy "extra keywords" appended to the defaults.
-  function resolveKeywords(res) {
-    if (Array.isArray(res.keywordList) && res.keywordList.length) {
-      return res.keywordList.slice();
-    }
-    if (Array.isArray(res.customKeywords) && res.customKeywords.length) {
-      return DEFAULT_AVIATION_KEYWORDS.concat(res.customKeywords);
-    }
-    return DEFAULT_AVIATION_KEYWORDS.slice();
-  }
-
   /* ---- load state, then start ---- */
-  safeStorageGet(["enabled", "fullyRemove", "customKeywords", "keywordList"], (res) => {
+  safeStorageGet(SETTINGS_KEYS, (res) => {
     if (typeof res.enabled === "boolean") state.enabled = res.enabled;
     if (typeof res.fullyRemove === "boolean") state.fullyRemove = res.fullyRemove;
-    state.keywords = resolveKeywords(res);
-    KW = normalizedKeywords();
-    MATCHERS = buildMatchers(KW);
+    setKeywords(resolveKeywords(res));
 
     observer = new MutationObserver(scheduleScan);
     scheduleScan();
@@ -314,11 +340,9 @@
       const isFilterable = onFilterablePage();
       if (isFilterable !== wasFilterable) {
         wasFilterable = isFilterable;
-        pauseObserver();
-        document.querySelectorAll("article[" + ATTR + "]").forEach(clearHidden);
-        resumeObserver();
+        clearAllMarks();
         if (isFilterable) scheduleScan();
-        else { recount(); }
+        else recount();
         updateBadge();
       }
     }, 400));
@@ -331,33 +355,19 @@
         if (!extensionAlive()) { shutdown(); return; }
         if (area !== "sync") return;
         if (changes.enabled) {
-          state.enabled = changes.enabled.newValue;
-          if (state.enabled) {
-            pauseObserver();
-            document.querySelectorAll("article[" + ATTR + "]").forEach(clearHidden);
-            resumeObserver();
-            scan();
-          } else {
-            unfilterAll();
-          }
+          state.enabled = changes.enabled.newValue as boolean;
+          if (state.enabled) rescan();
+          else unfilterAll();
         }
         if (changes.fullyRemove) {
-          state.fullyRemove = changes.fullyRemove.newValue;
-          pauseObserver();
-          document.querySelectorAll("article[" + ATTR + "]").forEach(clearHidden);
-          resumeObserver();
-          scan();
+          state.fullyRemove = changes.fullyRemove.newValue as boolean;
+          rescan();
         }
         if (changes.keywordList || changes.customKeywords) {
           // Re-read both keys so precedence stays correct.
           safeStorageGet(["keywordList", "customKeywords"], (res) => {
-            state.keywords = resolveKeywords(res);
-            KW = normalizedKeywords();
-            MATCHERS = buildMatchers(KW);
-            pauseObserver();
-            document.querySelectorAll("article[" + ATTR + "]").forEach(clearHidden);
-            resumeObserver();
-            scan();
+            setKeywords(resolveKeywords(res));
+            rescan();
           });
         }
       });

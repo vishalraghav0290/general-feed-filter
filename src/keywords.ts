@@ -1,7 +1,10 @@
 // Default aviation keyword list. A post is KEPT if its text contains any of
-// these (case-insensitive substring match). Users can override/extend this
-// list from the popup; overrides are stored in chrome.storage.
-const DEFAULT_AVIATION_KEYWORDS = [
+// these as a whole word/phrase (case-insensitive). Users can override/extend
+// this list from the popup; overrides are stored in chrome.storage.
+//
+// This file is compiled as a classic script (no import/export) so the constant
+// is a shared global for both the content script and the popup.
+const DEFAULT_AVIATION_KEYWORDS: readonly string[] = [
   // core
   "aviation", "aviate", "aircraft", "airplane", "aeroplane", "plane", "planes",
   "flight", "flights", "flying", "flew", "pilot", "pilots", "cockpit", "aviator",
@@ -45,3 +48,28 @@ const DEFAULT_AVIATION_KEYWORDS = [
   "dhruv", "rudra", "garud", "aero india", "republic day flypast", "flypast",
   "air warrior", "iaf day", "air force day"
 ];
+
+/** Settings persisted in chrome.storage.sync (shared by content script and popup). */
+interface StoredSettings {
+  enabled?: boolean;
+  fullyRemove?: boolean;
+  /** Legacy: extra keywords appended to the defaults. */
+  customKeywords?: string[];
+  /** Full user-editable keyword list (takes precedence over defaults). */
+  keywordList?: string[];
+}
+
+const SETTINGS_KEYS: (keyof StoredSettings)[] = ["enabled", "fullyRemove", "customKeywords", "keywordList"];
+
+// Resolve the effective keyword list from stored state.
+// - keywordList: full user-editable list (takes precedence).
+// - customKeywords: legacy "extra keywords" appended to the defaults.
+function resolveKeywords(res: StoredSettings): string[] {
+  if (Array.isArray(res.keywordList) && res.keywordList.length) {
+    return res.keywordList.slice();
+  }
+  if (Array.isArray(res.customKeywords) && res.customKeywords.length) {
+    return DEFAULT_AVIATION_KEYWORDS.concat(res.customKeywords);
+  }
+  return DEFAULT_AVIATION_KEYWORDS.slice();
+}
