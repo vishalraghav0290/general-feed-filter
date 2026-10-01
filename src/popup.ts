@@ -1,5 +1,5 @@
 // Popup UI: on/off toggle, hide mode, and the editable keyword list.
-// Depends on keywords.ts (loaded first by popup.html) for DEFAULT_AVIATION_KEYWORDS,
+// Depends on keywords.ts (loaded first by popup.html) for DEFAULT_KEYWORDS,
 // SETTINGS_KEYS and resolveKeywords.
 (function () {
   "use strict";
@@ -69,7 +69,7 @@
   });
 
   byId<HTMLButtonElement>("reset").addEventListener("click", () => {
-    const list = DEFAULT_AVIATION_KEYWORDS.slice();
+    const list = DEFAULT_KEYWORDS.slice();
     chrome.storage.sync.set({ keywordList: list, customKeywords: [] }, () => {
       renderList(list);
       flash("Reset to defaults \u2713");

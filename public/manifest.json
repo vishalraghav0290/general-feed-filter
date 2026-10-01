@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Aviation Only — X Feed Filter",
+  "name": "General Feed Filter for X",
   "version": "1.0.0",
-  "description": "Hides posts in your X (Twitter) timeline that aren't about aviation. Runs entirely on-device.",
+  "description": "Keep only the posts you care about in your X (Twitter) For You feed, using your own keywords. Ships with an aviation preset. Runs on-device.",
   "permissions": ["storage"],
   "host_permissions": [
     "https://x.com/*",
@@ -17,7 +17,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Aviation X Filter"
+    "default_title": "General Feed Filter"
   },
   "icons": {
     "48": "icon48.png",

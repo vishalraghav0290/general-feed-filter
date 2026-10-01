@@ -1,10 +1,11 @@
-// Default aviation keyword list. A post is KEPT if its text contains any of
-// these as a whole word/phrase (case-insensitive). Users can override/extend
-// this list from the popup; overrides are stored in chrome.storage.
+// Default keyword list: an aviation preset. A post is KEPT if its text
+// contains any of these as a whole word/phrase (case-insensitive). Users can
+// replace this list with any topic from the popup; their list is stored in
+// chrome.storage and takes precedence over these defaults.
 //
 // This file is compiled as a classic script (no import/export) so the constant
 // is a shared global for both the content script and the popup.
-const DEFAULT_AVIATION_KEYWORDS: readonly string[] = [
+const DEFAULT_KEYWORDS: readonly string[] = [
   // core
   "aviation", "aviate", "aircraft", "airplane", "aeroplane", "plane", "planes",
   "flight", "flights", "flying", "flew", "pilot", "pilots", "cockpit", "aviator",
@@ -69,7 +70,7 @@ function resolveKeywords(res: StoredSettings): string[] {
     return res.keywordList.slice();
   }
   if (Array.isArray(res.customKeywords) && res.customKeywords.length) {
-    return DEFAULT_AVIATION_KEYWORDS.concat(res.customKeywords);
+    return DEFAULT_KEYWORDS.concat(res.customKeywords);
   }
-  return DEFAULT_AVIATION_KEYWORDS.slice();
+  return DEFAULT_KEYWORDS.slice();
 }

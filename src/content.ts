@@ -1,7 +1,8 @@
-/* Aviation Only - X Feed Filter (content script)
- * Hides timeline posts whose text doesn't match any aviation keyword.
+/* General Feed Filter for X (content script)
+ * Hides "For You" timeline posts whose text doesn't match any of your
+ * keywords. Ships with an aviation keyword preset by default.
  * State (on/off, mode, custom keywords) lives in chrome.storage.sync.
- * Depends on keywords.ts (injected first) for DEFAULT_AVIATION_KEYWORDS,
+ * Depends on keywords.ts (injected first) for DEFAULT_KEYWORDS,
  * SETTINGS_KEYS and resolveKeywords.
  */
 (function () {
@@ -23,7 +24,7 @@
   const state: FilterState = {
     enabled: true,
     fullyRemove: false,
-    keywords: DEFAULT_AVIATION_KEYWORDS.slice(),
+    keywords: DEFAULT_KEYWORDS.slice(),
     kept: 0,
     hidden: 0
   };
@@ -114,7 +115,7 @@
     MATCHERS = buildMatchers(normalizedKeywords());
   }
 
-  function isAviation(text: string): boolean {
+  function matchesKeywords(text: string): boolean {
     const t = text || "";
     return MATCHERS.some(re => re.test(t));
   }
@@ -211,7 +212,7 @@
       posts.forEach(post => {
         if (post.getAttribute(ATTR)) return; // already decided
         const text = post.innerText || "";
-        if (isAviation(text)) {
+        if (matchesKeywords(text)) {
           post.setAttribute(ATTR, "kept");
         } else {
           applyHidden(post);
@@ -263,7 +264,7 @@
         "background:#0d1b2a;color:#4fa3ff;font:600 12px/1 system-ui,sans-serif;" +
         "padding:9px 13px;border-radius:20px;box-shadow:0 2px 12px rgba(0,0,0,.45);" +
         "cursor:pointer;user-select:none;opacity:.94";
-      el.title = "Click to toggle the aviation filter";
+      el.title = "Click to toggle the feed filter";
       el.setAttribute("role", "button");
       el.addEventListener("click", (e) => {
         e.preventDefault();
@@ -290,8 +291,8 @@
     if (!onFilterablePage()) { b.style.display = "none"; return; }
     b.style.display = "";
     b.textContent = state.enabled
-      ? `\u2708 Aviation \u00b7 ${state.kept} kept \u00b7 ${state.hidden} hidden`
-      : "\u2708 Filter off";
+      ? `Feed filter \u00b7 ${state.kept} kept \u00b7 ${state.hidden} hidden`
+      : "Feed filter off";
     b.style.background = state.enabled ? "#0d1b2a" : "#3a2a2a";
     b.style.color = state.enabled ? "#4fa3ff" : "#ffb74d";
   }
